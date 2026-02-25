@@ -61,11 +61,34 @@ async function ensureFirebaseReady() {
     if (auth.currentUser) return true;
 
     if (!mpAuthReadyPromise) {
-      mpAuthReadyPromise = auth.signInAnonymously()
-        .catch(err => {
-          mpAuthReadyPromise = null;
-          throw err;
-        });
+      // Retry up to 3 times with a short delay — helps on flaky mobile connections
+      mpAuthReadyPromise = (async () => {
+        const MAX_TRIES = 3;
+        let lastErr;
+        for (let attempt = 1; attempt <= MAX_TRIES; attempt++) {
+          try {
+            await auth.signInAnonymously();
+            return; // success
+          } catch (err) {
+            lastErr = err;
+            // auth/operation-not-allowed → anonymous auth is disabled in Firebase Console;
+            // retrying won't help, bail immediately with a clear message.
+            if (err.code === 'auth/operation-not-allowed') {
+              throw new Error(
+                'Anonymous sign-in is disabled. ' +
+                'Enable it in Firebase Console → Authentication → Sign-in method → Anonymous.'
+              );
+            }
+            if (attempt < MAX_TRIES) {
+              await new Promise(r => setTimeout(r, 800 * attempt)); // 0.8s, 1.6s back-off
+            }
+          }
+        }
+        throw lastErr;
+      })().catch(err => {
+        mpAuthReadyPromise = null;
+        throw err;
+      });
     }
     await mpAuthReadyPromise;
     return true;
@@ -73,6 +96,15 @@ async function ensureFirebaseReady() {
     console.error('Firebase auth failed:', e);
     return false;
   }
+}
+
+// Warm up Firebase auth silently on page load so mobile users don't
+// pay the cold-start cost (and auth state restoration) at button-tap time.
+function warmupFirebaseAuth() {
+  if (!window.firebaseConfig) return;
+  try {
+    ensureFirebaseReady().catch(() => {});
+  } catch (_) { /* ignore */ }
 }
 
 /* ===================================================

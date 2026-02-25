@@ -51,6 +51,9 @@ function init() {
   attachModalControls();
   syncSettingsUI();
   renderStats();
+  // Kick off Firebase auth warm-up in the background so it's ready by the
+  // time the user opens multiplayer (especially important on mobile cold-starts).
+  if (typeof warmupFirebaseAuth === 'function') warmupFirebaseAuth();
 
   // Show help on first visit — open it without blocking the keyboard
   // (user can always re-open it via the ? button)
