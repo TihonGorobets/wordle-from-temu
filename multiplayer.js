@@ -347,7 +347,7 @@ async function handleChoosingPhase() {
   openModal('mp-word-modal');
 
   if (!mpIsWordSetter) {
-    // Wait for status → 'playing'
+    // Non-setter: wait for status → 'playing'
     const statusRef = mpPartyRef.child('status');
     const fn = statusRef.on('value', snap => {
       if (snap.val() === 'playing') {
@@ -358,31 +358,90 @@ async function handleChoosingPhase() {
     });
     mpListeners.push(() => statusRef.off('value', fn));
   }
+
+  // Host relay: if the word setter is a non-host player, the host watches for their
+  // proposed word and applies the game state on their behalf (DB rules only let the
+  // host write targetWord / status / other players' fields).
+  if (mpIsHost && !mpIsWordSetter) {
+    const setterProposedRef = mpPartyRef.child(`players/${setterId}/proposedWord`);
+    const relayFn = setterProposedRef.on('value', async snap => {
+      const proposed = snap.val();
+      if (!proposed || !/^[A-Za-z]{5}$/.test(proposed)) return;
+      setterProposedRef.off('value', relayFn);
+
+      const pSnap = await mpPartyRef.child('players').once('value');
+      const ids   = Object.keys(pSnap.val() || {});
+      const resets = {};
+      ids.forEach(id => {
+        resets[`players/${id}/done`]         = id === setterId;
+        resets[`players/${id}/won`]          = false;
+        resets[`players/${id}/guessCount`]   = 0;
+        resets[`players/${id}/guesses`]      = {};
+        resets[`players/${id}/isWordSetter`] = id === setterId;
+        resets[`players/${id}/proposedWord`] = null; // clean up relay field
+      });
+      await mpPartyRef.update(resets);
+      await mpPartyRef.update({ targetWord: proposed.toUpperCase(), status: 'playing' });
+    });
+    mpListeners.push(() => setterProposedRef.off('value', relayFn));
+  }
 }
 
 async function mpSubmitSecretWord() {
   const word = document.getElementById('mp-secret-word-input').value.trim().toUpperCase();
-  if (word.length !== 5)    { showToast('Word must be 5 letters');  return; }
-  if (!isValidWord(word))   { showToast('Not in word list');        return; }
+  if (word.length !== 5)      { showToast('Word must be exactly 5 letters'); return; }
+  if (!/^[A-Z]+$/.test(word)) { showToast('Word must contain only letters'); return; }
 
-  const snap = await mpPartyRef.child('players').once('value');
-  const ids  = Object.keys(snap.val() || {});
+  if (mpIsHost) {
+    // Host can write game state directly
+    const snap = await mpPartyRef.child('players').once('value');
+    const ids  = Object.keys(snap.val() || {});
 
-  // Reset all players; mark setter as done (they watch this round)
-  const resets = {};
-  ids.forEach(id => {
-    resets[`players/${id}/done`]         = id === mpPlayerId;
-    resets[`players/${id}/won`]          = false;
-    resets[`players/${id}/guessCount`]   = 0;
-    resets[`players/${id}/guesses`]      = {};
-    resets[`players/${id}/isWordSetter`] = id === mpPlayerId;
-  });
-  await mpPartyRef.update(resets);
-  await mpPartyRef.update({ targetWord: word, status: 'playing' });
+    // Reset all players; mark setter as done (they watch this round)
+    const resets = {};
+    ids.forEach(id => {
+      resets[`players/${id}/done`]         = id === mpPlayerId;
+      resets[`players/${id}/won`]          = false;
+      resets[`players/${id}/guessCount`]   = 0;
+      resets[`players/${id}/guesses`]      = {};
+      resets[`players/${id}/isWordSetter`] = id === mpPlayerId;
+    });
+    await mpPartyRef.update(resets);
+    await mpPartyRef.update({ targetWord: word, status: 'playing' });
 
-  closeModal('mp-word-modal');
-  mpDone = true; // setter doesn't play this round
-  showMpWatchingOverlay();
+    closeModal('mp-word-modal');
+    mpDone = true; // setter doesn't play this round
+    showMpWatchingOverlay();
+  } else {
+    // Non-host setter: write only to own player record.
+    // The host relay listener in handleChoosingPhase() picks this up and applies
+    // targetWord + status changes using its host privileges.
+    try {
+      await mpPartyRef.child(`players/${mpPlayerId}/proposedWord`).set(word);
+    } catch (e) {
+      console.error('Failed to propose word:', e);
+      showToast('Failed to submit word. Please try again.');
+      return;
+    }
+
+    // Switch modal to waiting state
+    document.getElementById('mp-word-input-section').style.display = 'none';
+    document.getElementById('mp-word-waiting-msg').style.display   = '';
+    document.getElementById('mp-setter-label').textContent         = 'Word submitted! Starting round…';
+
+    mpDone = true; // setter watches, doesn't guess
+
+    // When host applies the state the status becomes 'playing' → switch to spectator view
+    const statusRef = mpPartyRef.child('status');
+    const fn = statusRef.on('value', snap => {
+      if (snap.val() === 'playing') {
+        statusRef.off('value', fn);
+        closeModal('mp-word-modal');
+        showMpWatchingOverlay();
+      }
+    });
+    mpListeners.push(() => statusRef.off('value', fn));
+  }
 }
 
 /* ===================================================

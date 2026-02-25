@@ -19,7 +19,7 @@
         },
         "targetWord": {
           ".write": "auth != null && root.child('parties/' + $partyCode + '/host').val() === auth.uid",
-          ".validate": "newData.isString() && newData.val().length <= 5"
+          ".validate": "newData.isString() && (newData.val().length === 0 || (newData.val().length === 5 && newData.val().matches(/^[A-Za-z]{5}$/)))"
         },
         "round": {
           ".write": "auth != null && root.child('parties/' + $partyCode + '/host').val() === auth.uid",
@@ -48,6 +48,9 @@
             "isWordSetter":{ ".validate": "newData.isBoolean()" },
             "typing": {
               ".validate": "newData.isString() && newData.val().length <= 5"
+            },
+            "proposedWord": {
+              ".validate": "!newData.exists() || (newData.isString() && newData.val().matches(/^[A-Za-z]{1,5}$/))"
             },
             "guesses": {
               "$rowIndex": {
