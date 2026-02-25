@@ -452,7 +452,9 @@ function attachModalControls() {
 
   // Close buttons (data-close attribute)
   document.querySelectorAll('.close-btn').forEach(btn => {
-    btn.addEventListener('click', () => closeModal(btn.dataset.close));
+    btn.addEventListener('click', () => {
+      if (btn.dataset.close) closeModal(btn.dataset.close);
+    });
   });
 
   // Overlay click to close (but not MP lobby/word/results — use Leave button)
@@ -503,6 +505,28 @@ function attachModalControls() {
 
   // Multiplayer button
   document.getElementById('btn-multiplayer').addEventListener('click', openMpMenu);
+
+  // Multiplayer modal actions (bound in JS to avoid inline handlers)
+  document.getElementById('mp-create-btn').addEventListener('click', createParty);
+  document.getElementById('mp-join-btn').addEventListener('click', joinParty);
+  document.getElementById('mp-lobby-close-btn').addEventListener('click', leaveParty);
+  document.getElementById('mp-lobby-start').addEventListener('click', mpHostStart);
+  document.getElementById('mp-lobby-leave-btn').addEventListener('click', leaveParty);
+  document.getElementById('mp-submit-word-btn').addEventListener('click', mpSubmitSecretWord);
+  document.getElementById('mp-play-again-btn').addEventListener('click', mpPlayAgain);
+  document.getElementById('mp-back-lobby-btn').addEventListener('click', mpReturnToLobby);
+  document.getElementById('mp-results-leave-btn').addEventListener('click', leaveParty);
+  document.getElementById('mp-mode-classic').addEventListener('change', () => mpSelectMode('classic'));
+  document.getElementById('mp-mode-custom').addEventListener('change', () => mpSelectMode('custom'));
+
+  document.getElementById('mp-copy-code-btn').addEventListener('click', () => {
+    const code = document.getElementById('mp-lobby-code').textContent;
+    navigator.clipboard.writeText(code).then(() => {
+      showToast('Code copied!');
+    }).catch(() => {
+      showToast('Failed to copy code');
+    });
+  });
 
   // Escape key — don't auto-close MP lobby/word/results without proper cleanup
   const MP_PERSISTENT_MODALS = new Set(['mp-lobby-modal','mp-word-modal','mp-results-modal']);

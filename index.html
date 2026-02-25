@@ -6,7 +6,7 @@
   <!-- Content Security Policy: restricts which scripts/connections are allowed -->
   <meta http-equiv="Content-Security-Policy" content="
     default-src 'none';
-    script-src  'self' 'unsafe-inline' https://www.gstatic.com;
+    script-src  'self' https://www.gstatic.com;
     style-src   'self';
     connect-src 'self'
                 https://*.firebasedatabase.app
@@ -258,13 +258,13 @@
           <input class="mp-input" id="mp-name-input" type="text" maxlength="20" placeholder="Enter your name" />
         </div>
         <div class="mp-section-divider">Create a party</div>
-        <button class="mp-btn mp-btn-primary" onclick="createParty()">Create Party</button>
+        <button class="mp-btn mp-btn-primary" id="mp-create-btn">Create Party</button>
         <div class="mp-section-divider">— or join one —</div>
         <div class="mp-field-group">
           <label class="mp-label" for="mp-code-input">Party code</label>
           <input class="mp-input mp-code-input" id="mp-code-input" type="text" maxlength="6" placeholder="XXXXXX" />
         </div>
-        <button class="mp-btn mp-btn-secondary" onclick="joinParty()">Join Party</button>
+        <button class="mp-btn mp-btn-secondary" id="mp-join-btn">Join Party</button>
       </div>
     </div>
   </div>
@@ -274,13 +274,13 @@
     <div class="modal">
       <div class="modal-header">
         <h2>Party Lobby</h2>
-        <button class="close-btn" onclick="leaveParty()">&times;</button>
+        <button class="close-btn" id="mp-lobby-close-btn">&times;</button>
       </div>
       <div class="modal-body">
         <div class="mp-code-display">
           <span class="mp-code-label">Party Code</span>
           <span class="mp-code-value" id="mp-lobby-code"></span>
-          <button class="mp-copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('mp-lobby-code').textContent).then(()=>showToast('Code copied!'))">Copy</button>
+          <button class="mp-copy-btn" id="mp-copy-code-btn">Copy</button>
         </div>
         <div class="mp-player-count" id="mp-lobby-count"></div>
         <ul class="mp-player-list" id="mp-lobby-players"></ul>
@@ -289,26 +289,26 @@
           <p class="mp-section-title">Game Mode</p>
           <div class="mp-mode-options">
             <label class="mp-mode-option">
-              <input type="radio" name="mp-mode" id="mp-mode-classic" value="classic" checked onchange="mpSelectMode('classic')" />
+              <input type="radio" name="mp-mode" id="mp-mode-classic" value="classic" checked />
               <span class="mp-mode-card">
                 <strong>Classic</strong>
                 <small>Everyone guesses the same random word</small>
               </span>
             </label>
             <label class="mp-mode-option">
-              <input type="radio" name="mp-mode" id="mp-mode-custom" value="custom" onchange="mpSelectMode('custom')" />
+              <input type="radio" name="mp-mode" id="mp-mode-custom" value="custom" />
               <span class="mp-mode-card">
                 <strong>Custom Word</strong>
                 <small>Each player takes a turn setting the word</small>
               </span>
             </label>
           </div>
-          <button class="mp-btn mp-btn-primary" id="mp-lobby-start" onclick="mpHostStart()">Start Game</button>
+          <button class="mp-btn mp-btn-primary" id="mp-lobby-start">Start Game</button>
         </div>
         <div id="mp-guest-waiting" class="mp-waiting-text" style="display:none">
           Waiting for the host to start the game…
         </div>
-        <button class="mp-btn mp-btn-ghost" onclick="leaveParty()">Leave Party</button>
+        <button class="mp-btn mp-btn-ghost" id="mp-lobby-leave-btn">Leave Party</button>
       </div>
     </div>
   </div>
@@ -326,7 +326,7 @@
             <label class="mp-label" for="mp-secret-word-input">Secret 5-letter word</label>
             <input class="mp-input mp-code-input" id="mp-secret-word-input" type="text" maxlength="5" placeholder="WORD" autocomplete="off" />
           </div>
-          <button class="mp-btn mp-btn-primary" onclick="mpSubmitSecretWord()" style="margin-top:12px">Submit Word</button>
+          <button class="mp-btn mp-btn-primary" id="mp-submit-word-btn" style="margin-top:12px">Submit Word</button>
         </div>
         <div id="mp-word-waiting-msg" class="mp-waiting-text" style="display:none">
           Please wait while the word is being chosen…
@@ -357,14 +357,14 @@
         </table>
         <div id="mp-results-host-controls" style="display:none">
           <div class="mp-results-actions">
-            <button class="mp-btn mp-btn-primary" onclick="mpPlayAgain()">Play Again</button>
-            <button class="mp-btn mp-btn-secondary" onclick="mpReturnToLobby()">Back to Lobby</button>
+            <button class="mp-btn mp-btn-primary" id="mp-play-again-btn">Play Again</button>
+            <button class="mp-btn mp-btn-secondary" id="mp-back-lobby-btn">Back to Lobby</button>
           </div>
         </div>
         <div id="mp-results-guest-msg" class="mp-waiting-text" style="display:none">
           Waiting for the host to start the next round…
         </div>
-        <button class="mp-btn mp-btn-ghost" onclick="leaveParty()" style="margin-top:8px">Leave Party</button>
+        <button class="mp-btn mp-btn-ghost" id="mp-results-leave-btn" style="margin-top:8px">Leave Party</button>
       </div>
     </div>
   </div>
