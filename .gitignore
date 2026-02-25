@@ -1,2 +1,3 @@
 # Secret keys – never commit the real config
-config.js
+# config.js is now committed directly (Firebase web keys are public-facing by design)
+# config.example.js
