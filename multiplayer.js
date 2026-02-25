@@ -10,16 +10,9 @@
    4. Replace the placeholder values below with your own config.
    =================================================== */
 
-const firebaseConfig = {
-  apiKey:            "REDACTED_FIREBASE_API_KEY",
-  authDomain:        "REDACTED_FIREBASE_PROJECT_ID.firebaseapp.com",
-  databaseURL:       "https://REDACTED_FIREBASE_PROJECT_ID-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId:         "REDACTED_FIREBASE_PROJECT_ID",
-  storageBucket:     "REDACTED_FIREBASE_PROJECT_ID.firebasestorage.app",
-  messagingSenderId: "REDACTED_FIREBASE_SENDER_ID",
-  appId: "1:REDACTED_FIREBASE_SENDER_ID:web:2501f3b3704482ca2b3d24",
-  measurementId: "REDACTED_FIREBASE_MEASUREMENT_ID"
-};
+// Firebase config is loaded from config.js (excluded from version control).
+// See config.example.js for the required shape.
+const firebaseConfig = window.firebaseConfig;
 
 /* ===================================================
    MP STATE

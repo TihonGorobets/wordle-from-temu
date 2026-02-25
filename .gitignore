@@ -1,0 +1,2 @@
+# Secret keys – never commit the real config
+config.js
