@@ -60,7 +60,39 @@ async function ensureFirebaseReady() {
       throw new Error('Firebase Auth SDK is not loaded');
     }
     const auth = firebase.auth();
-    if (auth.currentUser) return true;
+
+    const waitForCurrentUser = (timeoutMs = 10000) => new Promise((resolve, reject) => {
+      if (auth.currentUser && auth.currentUser.uid) {
+        resolve(auth.currentUser);
+        return;
+      }
+      let done = false;
+      let unsub = null;
+      const timer = setTimeout(() => {
+        if (done) return;
+        done = true;
+        if (typeof unsub === 'function') unsub();
+        reject(new Error('Authentication state did not become ready in time'));
+      }, timeoutMs);
+
+      unsub = auth.onAuthStateChanged(user => {
+        if (done) return;
+        if (user && user.uid) {
+          done = true;
+          clearTimeout(timer);
+          if (typeof unsub === 'function') unsub();
+          resolve(user);
+        }
+      }, err => {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        if (typeof unsub === 'function') unsub();
+        reject(err || new Error('Failed to observe authentication state'));
+      });
+    });
+
+    if (auth.currentUser && auth.currentUser.uid) return true;
 
     if (!mpAuthReadyPromise) {
       const withTimeout = (promise, ms, label) => Promise.race([
@@ -76,7 +108,8 @@ async function ensureFirebaseReady() {
         let lastErr;
         for (let attempt = 1; attempt <= MAX_TRIES; attempt++) {
           try {
-            await withTimeout(auth.signInAnonymously(), 8000, 'Anonymous sign-in');
+            await withTimeout(auth.signInAnonymously(), 12000, 'Anonymous sign-in');
+            await withTimeout(waitForCurrentUser(10000), 10000, 'Auth user readiness');
             return; // success
           } catch (err) {
             lastErr = err;
@@ -100,6 +133,9 @@ async function ensureFirebaseReady() {
       });
     }
     await mpAuthReadyPromise;
+    if (!auth.currentUser || !auth.currentUser.uid) {
+      await waitForCurrentUser(10000);
+    }
     return true;
   } catch (e) {
     console.error('Firebase auth failed:', e);
