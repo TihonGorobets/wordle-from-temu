@@ -477,11 +477,35 @@ async function mpSubmitSecretWord() {
   const authUid = firebase.auth && firebase.auth().currentUser
     ? firebase.auth().currentUser.uid
     : '';
-  if (authUid && authUid !== mpPlayerId) {
-    mpPlayerId = authUid;
+  if (!authUid) {
+    showToast('Multiplayer session unavailable. Please rejoin the party.');
+    return;
+  }
+
+  // Always trust Firebase auth UID as the canonical identity.
+  const previousPlayerId = mpPlayerId;
+  mpPlayerId = authUid;
+
+  // Re-check current setter from the server right before submit to avoid stale local state.
+  let liveSetterId = '';
+  try {
+    const partySnap = await mpPartyRef.once('value');
+    const party = partySnap.val() || {};
+    const queue = party.wordQueue || {};
+    const idx = party.wordSetterIndex || 0;
+    liveSetterId = queue[idx] || '';
+    mpIsWordSetter = (mpPlayerId === liveSetterId);
+  } catch (e) {
+    console.error('Failed to refresh chooser state:', e);
+    showToast('Failed to validate chooser state. Please try again.');
+    return;
   }
 
   if (!mpIsWordSetter) {
+    if (previousPlayerId && previousPlayerId !== mpPlayerId && previousPlayerId === liveSetterId) {
+      showToast('Session changed on this device. Rejoin the party to submit the word.');
+      return;
+    }
     showToast('Waiting for the selected player to submit the word');
     return;
   }
@@ -515,11 +539,11 @@ async function mpSubmitSecretWord() {
     // The host relay listener in handleChoosingPhase() picks this up and applies
     // targetWord + status changes using its host privileges.
     try {
-      await mpPartyRef.child(`players/${mpPlayerId}/proposedWord`).set(word);
+      await mpPartyRef.child(`players/${authUid}/proposedWord`).set(word);
     } catch (e) {
       console.error('Failed to propose word:', e);
       if (e && (e.code === 'PERMISSION_DENIED' || e.code === 'permission-denied')) {
-        showToast('Submission denied. Rejoin the party and try again.');
+        showToast('Submission denied. Your phone session changed — rejoin the party and try again.');
       } else {
         showToast('Failed to submit word. Please try again.');
       }
