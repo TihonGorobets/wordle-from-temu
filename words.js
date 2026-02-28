@@ -1,9 +1,192 @@
 /* =====================================================
    WORDLE  -  Word Database
-   All 5-letter words, sourced from dwyl/english-words.
+
+   ANSWERS        – common, everyday 5-letter words.
+                    Only these are ever chosen as the
+                    correct answer.
+
+   EXTENDED_WORDS – less-common but valid 5-letter
+                    words players may use as guesses.
+
+   ALL_VALID_WORDS – Set( ANSWERS ∪ EXTENDED_WORDS )
+                    used for guess validation (O(1)).
    ===================================================== */
 
+/* ── Primary answer pool (common / well-known words) ── */
 const ANSWERS = [
+  // A
+  "abbey", "abbot", "abide", "abode", "abort", "above", "abuse", "abyss",
+  "ached", "acorn", "acrid", "acute", "adage", "adept", "admit", "adobe",
+  "adopt", "adore", "adorn", "adult", "after", "agile", "aging", "agony",
+  "agree", "ahead", "alarm", "album", "alert", "alibi", "alien", "alike",
+  "align", "alive", "alley", "allot", "allow", "alloy", "aloft", "alone",
+  "along", "aloof", "aloud", "altar", "alter", "amaze", "amber", "amble",
+  "amend", "amiss", "ample", "amuse", "angel", "anger", "angle", "angry",
+  "anime", "anise", "annex", "anvil", "apple", "apply", "apron", "ardor",
+  "arena", "argue", "arise", "aroma", "arose", "array", "arson", "ashen",
+  "aside", "askew", "asset", "atone", "attic", "audit", "avail", "avert",
+  "avoid", "awake", "award", "aware", "awful", "azure",
+  // B
+  "bacon", "badge", "badly", "bagel", "baker", "baked", "banjo", "barge",
+  "baron", "basic", "basil", "basin", "batch", "beach", "beard", "beast",
+  "beech", "being", "beige", "belle", "belly", "below", "bench", "berry",
+  "berth", "bible", "birch", "bison", "black", "blade", "blame", "bland",
+  "blank", "blast", "blaze", "bleak", "blend", "bless", "bliss", "blitz",
+  "block", "blood", "bloom", "blown", "bluff", "blunt", "blurt", "blush",
+  "board", "boast", "bogus", "boost", "borax", "bosom", "botch", "bough",
+  "boxer", "brace", "braid", "brake", "brand", "brave", "brawn", "bread",
+  "break", "breed", "bribe", "bride", "brine", "brink", "brisk", "broil",
+  "broke", "brook", "brood", "broth", "brown", "budge", "bulge", "bully",
+  "burly", "burnt", "burst", "bushy", "buyer",
+  // C
+  "cabal", "cabin", "cable", "cadet", "camel", "cameo", "canal", "candy",
+  "canon", "caper", "carry", "carve", "catch", "caulk", "cause", "cedar",
+  "chain", "chair", "chalk", "chaos", "chard", "charm", "chasm", "cheap",
+  "cheat", "check", "cheek", "cheer", "chess", "chest", "child", "chill",
+  "chimp", "choir", "cinch", "civic", "civil", "claim", "clamp", "clash",
+  "clasp", "class", "clean", "clear", "cleft", "clerk", "click", "cliff",
+  "climb", "cling", "cloak", "clock", "clone", "close", "cloth", "cloud",
+  "clout", "clown", "cluck", "clump", "clunk", "coach", "coast", "cobra",
+  "cocoa", "comet", "comic", "comma", "conch", "coral", "couch", "cough",
+  "count", "court", "cover", "covet", "crack", "craft", "cramp", "crane",
+  "crash", "crave", "crawl", "crazy", "creak", "creek", "creep", "crest",
+  "crime", "crimp", "crisp", "croak", "cross", "crowd", "crown", "crude",
+  "cruel", "crush", "crust", "crypt", "curly", "curve",
+  // D
+  "daisy", "dance", "dandy", "dazed", "dealt", "decal", "decay", "decoy",
+  "decry", "delay", "delta", "depot", "derby", "devil", "dirty", "disco",
+  "dodge", "dowdy", "dowry", "draft", "drain", "drawl", "dread", "dream",
+  "dress", "drift", "drill", "drink", "drive", "drool", "droop", "drown",
+  "druid", "dryer", "duchy", "dunce", "dusky", "dwarf", "dwell",
+  // E
+  "eagle", "early", "earth", "easel", "eerie", "eight", "eject", "elbow",
+  "elder", "elite", "ember", "empty", "enemy", "enjoy", "enter", "equal",
+  "equip", "erupt", "essay", "evade", "event", "every", "exact", "exalt",
+  "excel", "exile", "exist", "expel", "extra",
+  // F
+  "fable", "faint", "fairy", "faith", "fancy", "farce", "fatal", "feast",
+  "fence", "ferry", "fetch", "fever", "fiber", "field", "fiend", "fiery",
+  "fifth", "fifty", "filth", "final", "finch", "first", "flair", "flake",
+  "flame", "flank", "flare", "flask", "flash", "flesh", "flick", "fling",
+  "flint", "float", "flock", "flood", "floor", "floss", "flour", "flown",
+  "fluff", "flute", "focal", "foggy", "foray", "forge", "forth", "found",
+  "frank", "fraud", "fresh", "frisk", "frizz", "frock", "frond", "front",
+  "frost", "froth", "froze", "fudge", "fully", "fungi", "funky", "funny",
+  "futon",
+  // G
+  "gaffe", "gaily", "gamma", "gauze", "gauzy", "gavel", "gecko", "ghost",
+  "ghoul", "giant", "giddy", "girth", "given", "glade", "gland", "glare",
+  "glass", "glaze", "gleam", "glean", "glide", "gloom", "glory", "gloss",
+  "glove", "glyph", "gnome", "goose", "gourd", "grace", "grade", "grain",
+  "grand", "grant", "graph", "grasp", "grass", "grave", "gravy", "graze",
+  "greed", "green", "greet", "grief", "grill", "grime", "grimy", "grind",
+  "groan", "groin", "groom", "grove", "growl", "grown", "gruel", "gruff",
+  "grunt", "guard", "guava", "guess", "guest", "guide", "guile", "guise",
+  "gulch", "gummy", "gusto", "gusty", "gypsy",
+  // H
+  "habit", "haste", "hatch", "haunt", "haven", "hazel", "heady", "heart",
+  "heavy", "hedge", "heist", "herbs", "heron", "hinge", "hippo", "hoard",
+  "holly", "honey", "honor", "horse", "hotel", "hound", "human", "humid",
+  "humor", "hunch", "hurry", "hyena",
+  // I
+  "icing", "ideal", "idiom", "idiot", "idyll", "image", "imbue", "impel",
+  "imply", "inept", "inert", "infer", "inner", "input", "intro", "ionic",
+  "irate", "ivory",
+  // J
+  "jaunt", "jazzy", "jelly", "jewel", "jiffy", "joust", "judge", "juice",
+  "juicy", "jumbo", "jumpy",
+  // K
+  "kebab", "knack", "kneel", "knell", "knelt", "koala",
+  // L
+  "label", "lance", "lapse", "large", "laser", "latch", "latte", "leafy",
+  "learn", "lease", "legal", "lemon", "level", "light", "lilac", "limit",
+  "liner", "lithe", "liver", "llama", "lodge", "logic", "loony", "loopy",
+  "lousy", "lower", "lucid", "lucky", "lunar", "lunch", "lusty", "lyric",
+  // M
+  "magic", "major", "maker", "mambo", "mango", "mania", "manor", "maple",
+  "marsh", "match", "mayor", "mealy", "melon", "mercy", "merge", "merit",
+  "merry", "messy", "metal", "might", "milky", "mince", "mirth", "misty",
+  "model", "moody", "moose", "moral", "mossy", "mourn", "mousy", "movie",
+  "mucky", "muddy", "mulch", "murky", "mushy", "music", "musky", "musty",
+  "myrrh",
+  // N
+  "nadir", "nasty", "nerve", "never", "newly", "night", "noble", "noise",
+  "north", "notch", "novel", "nudge", "nurse", "nymph",
+  // O
+  "oaken", "oasis", "obese", "octet", "olive", "onset", "opera", "optic",
+  "orbit", "order", "other", "outer", "oxide",
+  // P
+  "panda", "panel", "panic", "pansy", "papal", "paper", "pasty", "patch",
+  "pause", "peace", "peach", "pearl", "pesky", "petal", "petty", "phase",
+  "piano", "picky", "pilot", "pinch", "piney", "pitch", "pithy", "pixel",
+  "pizza", "place", "plaid", "plain", "plane", "plank", "plant", "plaza",
+  "plead", "pleat", "pluck", "polka", "polyp", "poppy", "porch", "perch",
+  "poker", "pound", "pouty", "power", "prank", "prawn", "press", "price",
+  "prick", "pride", "prime", "prism", "privy", "probe", "proof", "prose",
+  "proud", "prune", "psalm", "pudgy", "pulse", "pupil", "purge", "pushy",
+  "pygmy",
+  // Q
+  "quack", "qualm", "quart", "queen", "quest", "queue", "quick", "quiet",
+  "quill", "quirk", "quite",
+  // R
+  "radar", "rainy", "raise", "rally", "ramen", "ranch", "range", "rapid",
+  "raven", "reach", "react", "realm", "rebel", "reedy", "regal", "reign",
+  "relax", "relay", "repay", "repel", "reply", "revel", "ridge", "rifle",
+  "rigid", "risky", "rival", "rivet", "rodeo", "rogue", "roost", "rouge",
+  "rough", "round", "rowdy", "royal", "ruddy", "ruler", "rumor", "rural",
+  "rusty",
+  // S
+  "sadly", "saint", "salsa", "salty", "sandy", "sassy", "sauce", "savvy",
+  "scalp", "scaly", "scamp", "scant", "scare", "scarf", "scene", "scent",
+  "scone", "scoop", "scope", "scorn", "scout", "scram", "scrap", "screw",
+  "scrub", "seize", "sense", "serum", "serve", "seven", "shade", "shady",
+  "shaft", "shake", "shaky", "shame", "shape", "share", "sharp", "sheep",
+  "sheer", "shelf", "shell", "shift", "shiny", "shirt", "shock", "shore",
+  "short", "shout", "shove", "shown", "shrub", "shrug", "siege", "sigma",
+  "silky", "silly", "since", "sinew", "sixth", "siren", "sixty", "skate",
+  "skill", "skimp", "skirt", "skulk", "skull", "slant", "slash", "sleek",
+  "sleep", "sleet", "slept", "slice", "slide", "slime", "slimy", "slink",
+  "slosh", "sloth", "slump", "slurp", "slush", "small", "smart", "smear",
+  "smell", "smelt", "smile", "smirk", "smite", "snack", "snare", "sneer",
+  "sniff", "snore", "snort", "snuck", "soapy", "solar", "solid", "solve",
+  "sonic", "soppy", "sorry", "south", "spend", "spice", "spicy", "spill",
+  "spine", "spire", "spite", "splat", "split", "spoke", "spook", "spool",
+  "spoon", "sport", "spout", "spree", "sprig", "squad", "squat", "squid",
+  "stack", "staff", "stain", "stair", "stale", "stalk", "stall", "stamp",
+  "stand", "stare", "stark", "start", "steak", "steal", "steam", "steel",
+  "steep", "steer", "stern", "stiff", "still", "sting", "stink", "stomp",
+  "stone", "storm", "story", "stout", "stove", "strap", "straw", "stray",
+  "strip", "strum", "strut", "study", "stump", "stung", "stunt", "suave",
+  "sugar", "suite", "sunny", "swamp", "swear", "sweat", "sweep", "sweet",
+  "swept", "swift", "swill", "swipe", "swirl", "swoop", "sword", "syrup",
+  // T
+  "tabby", "taboo", "taffy", "tango", "tangy", "taunt", "tense", "tepid",
+  "thank", "theft", "thorn", "tidal", "tiger", "tight", "tasty", "timid",
+  "tipsy", "tired", "titan", "tonal", "topaz", "torch", "total", "touch",
+  "toxic", "track", "trade", "trail", "train", "trait", "tramp", "trash",
+  "trend", "trial", "trick", "tripe", "trite", "troll", "troop", "trout",
+  "trove", "truce", "truck", "truly", "trump", "trunk", "truss", "trust",
+  "tulip", "tunic", "tweak", "tweed", "tweet", "twice", "twirl", "twist",
+  // U
+  "udder", "ultra", "uncut", "unfit", "union", "unite", "until", "upset",
+  "urban", "usual", "usurp", "utter",
+  // V
+  "vague", "valid", "valor", "vapor", "vault", "vaunt", "venom", "vicar",
+  "vigil", "vigor", "viper", "viral", "vivid", "vocal", "vodka", "voter",
+  // W
+  "wacky", "waltz", "warty", "watch", "water", "weary", "wedge", "weedy",
+  "weird", "whale", "whack", "whiff", "whirl", "white", "whole", "wield",
+  "wince", "windy", "witch", "witty", "woody", "woozy", "world", "wordy",
+  "worse", "worst", "worth", "would", "wrath", "wreak", "wreck", "wring",
+  "write", "wrong",
+  // Y
+  "yacht", "yearn", "yield", "young", "youth",
+  // Z
+  "zappy", "zesty", "zippy"
+];
+
+/* ── Extended guess list (less-common but valid words) ─────── */
+const EXTENDED_WORDS = [
   "aahed", "aalii", "aargh", "aaron", "abaca", "abaci", "aback", "abada", "abaff", "abaft",
   "abaka", "abama", "abamp", "aband", "abase", "abash", "abask", "abate", "abaue", "abave",
   "abaze", "abbas", "abbes", "abbey", "abbie", "abbot", "abdal", "abdat", "abdom", "abeam",
@@ -1599,5 +1782,8 @@ const ANSWERS = [
   "zymin"
 ];
 
-// Every word in ANSWERS is also a valid guess
-const ALL_VALID_WORDS = new Set(ANSWERS);
+// All valid guesses = common answers ∪ extended list  (O(1) Set lookup)
+const ALL_VALID_WORDS = new Set([
+  ...ANSWERS.map(w => w.toLowerCase()),
+  ...EXTENDED_WORDS.map(w => w.toLowerCase())
+]);
